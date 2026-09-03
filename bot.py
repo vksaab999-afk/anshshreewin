@@ -81,7 +81,7 @@ def run_web_server():
 # --- INSTANT JOIN REQUEST & WELCOME SEQUENCE ---
 async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
     try:
-        # 1. Pehla Message (MSG 30)
+        # 1. Pehla Message (MSG 30) - copy_message preserves animated emojis automatically
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_1
         )
@@ -143,7 +143,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
 
-# --- LIGHTNING FAST BROADCAST ENGINE ---
+# --- LIGHTNING FAST BROADCAST ENGINE (FIXED FOR ANIMATED EMOJIS) ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
     users = list(users_collection.find({}, {"user_id": 1}))
     total_users = len(users)
@@ -167,47 +167,8 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
         if u_id in ADMIN_IDS:
             continue
         try:
-            if message_to_broadcast.text:
-                await context.bot.send_message(
-                    chat_id=u_id,
-                    text=message_to_broadcast.text,
-                    entities=message_to_broadcast.entities,
-                )
-            elif message_to_broadcast.photo:
-                await context.bot.send_photo(
-                    chat_id=u_id,
-                    photo=message_to_broadcast.photo[-1].file_id,
-                    caption=message_to_broadcast.caption,
-                    caption_entities=message_to_broadcast.caption_entities,
-                )
-            elif message_to_broadcast.video:
-                await context.bot.send_video(
-                    chat_id=u_id,
-                    video=message_to_broadcast.video.file_id,
-                    caption=message_to_broadcast.caption,
-                    caption_entities=message_to_broadcast.caption_entities,
-                )
-            elif message_to_broadcast.audio:
-                await context.bot.send_audio(
-                    chat_id=u_id,
-                    audio=message_to_broadcast.audio.file_id,
-                    caption=message_to_broadcast.caption,
-                    caption_entities=message_to_broadcast.caption_entities,
-                )
-            elif message_to_broadcast.voice:
-                await context.bot.send_voice(
-                    chat_id=u_id,
-                    voice=message_to_broadcast.voice.file_id,
-                    caption=message_to_broadcast.caption,
-                    caption_entities=message_to_broadcast.caption_entities,
-                )
-            elif message_to_broadcast.document:
-                await context.bot.send_document(
-                    chat_id=u_id,
-                    document=message_to_broadcast.document.file_id,
-                    caption=message_to_broadcast.caption,
-                    caption_entities=message_to_broadcast.caption_entities,
-                )
+            # message_to_broadcast.copy() preserves all media, formatting, and custom/animated emojis perfectly!
+            await message_to_broadcast.copy(chat_id=u_id)
         except Exception as e:
             logging.error(f"Broadcast error for {u_id}: {e}")
 
