@@ -132,7 +132,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
 
-# --- BROADCAST ENGINE WITH ENTITIES PRESERVATION ---
+# --- LIGHTNING FAST BROADCAST ENGINE (WITH EXACT ENTITY PRESERVATION LOGIC) ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
     users = list(users_collection.find({}, {"user_id": 1}))
     total_users = len(users)
@@ -156,7 +156,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
         if u_id in ADMIN_IDS:
             continue
         try:
-            # Agar text message hai toh uski entities (animated emojis) ke sath send karenge
             if message_to_broadcast.text:
                 await context.bot.send_message(
                     chat_id=u_id,
@@ -164,44 +163,44 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     entities=message_to_broadcast.entities,
                     reply_markup=message_to_broadcast.reply_markup,
                 )
-            elif message_to_broadcast.caption:
-                # Media hai toh caption aur caption_entities ke sath bhejenge
-                if message_to_broadcast.photo:
-                    await context.bot.send_photo(
-                        chat_id=u_id,
-                        photo=message_to_broadcast.photo[-1].file_id,
-                        caption=message_to_broadcast.caption,
-                        caption_entities=message_to_broadcast.caption_entities,
-                        reply_markup=message_to_broadcast.reply_markup,
-                    )
-                elif message_to_broadcast.video:
-                    await context.bot.send_video(
-                        chat_id=u_id,
-                        video=message_to_broadcast.video.file_id,
-                        caption=message_to_broadcast.caption,
-                        caption_entities=message_to_broadcast.caption_entities,
-                        reply_markup=message_to_broadcast.reply_markup,
-                    )
-                elif message_to_broadcast.document:
-                    await context.bot.send_document(
-                        chat_id=u_id,
-                        document=message_to_broadcast.document.file_id,
-                        caption=message_to_broadcast.caption,
-                        caption_entities=message_to_broadcast.caption_entities,
-                        reply_markup=message_to_broadcast.reply_markup,
-                    )
-                else:
-                    await context.bot.copy_message(
-                        chat_id=u_id,
-                        from_chat_id=admin_chat_id,
-                        message_id=message_to_broadcast.message_id,
-                        reply_markup=message_to_broadcast.reply_markup,
-                    )
-            else:
-                await context.bot.copy_message(
+            elif message_to_broadcast.photo:
+                await context.bot.send_photo(
                     chat_id=u_id,
-                    from_chat_id=admin_chat_id,
-                    message_id=message_to_broadcast.message_id,
+                    photo=message_to_broadcast.photo[-1].file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                    reply_markup=message_to_broadcast.reply_markup,
+                )
+            elif message_to_broadcast.video:
+                await context.bot.send_video(
+                    chat_id=u_id,
+                    video=message_to_broadcast.video.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                    reply_markup=message_to_broadcast.reply_markup,
+                )
+            elif message_to_broadcast.audio:
+                await context.bot.send_audio(
+                    chat_id=u_id,
+                    audio=message_to_broadcast.audio.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                    reply_markup=message_to_broadcast.reply_markup,
+                )
+            elif message_to_broadcast.voice:
+                await context.bot.send_voice(
+                    chat_id=u_id,
+                    voice=message_to_broadcast.voice.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                    reply_markup=message_to_broadcast.reply_markup,
+                )
+            elif message_to_broadcast.document:
+                await context.bot.send_document(
+                    chat_id=u_id,
+                    document=message_to_broadcast.document.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
                     reply_markup=message_to_broadcast.reply_markup,
                 )
         except Exception as e:
@@ -248,9 +247,11 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if text_after_command:
             users = list(users_collection.find({}, {"user_id": 1}))
             total_users = len(users)
+
             progress_msg = await msg.reply_text(
                 f"🚀 Broadcast started for {total_users} users..."
             )
+
             for u in users:
                 u_id = u["user_id"]
                 if u_id in ADMIN_IDS:
@@ -261,6 +262,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 except:
                     pass
+
             await progress_msg.edit_text(
                 "✅ **Broadcast Completed!**", parse_mode="Markdown"
             )
@@ -271,6 +273,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
 
+# --- STATS COMMAND ---
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id in ADMIN_IDS:
         total_users = users_collection.count_documents({})
@@ -295,11 +298,13 @@ def main():
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
     app.add_handler(CallbackQueryHandler(handle_button))
+
+    # Direct Message Handler for Admins
     app.add_handler(
         MessageHandler(filters.User(ADMIN_IDS) & ~filters.COMMAND, auto_broadcast)
     )
 
-    print("Bot is running with explicit entity preservation...")
+    print("Bot is running with verified entity-preserving broadcast...")
     app.run_polling(drop_pending_updates=True, close_loop=False)
 
 
