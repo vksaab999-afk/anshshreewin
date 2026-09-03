@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 # ==================== CONFIGURATION ====================
 BOT_TOKEN = "8727719954:AAFLw0h-SOVxsKR_917eivJdWyBCjgHsLYc" 
 
-# Multiple Admins Support (All 3 Admins)
+# Admins Support
 ADMIN_IDS = [5785924075, 8802096404]
 
 # MongoDB Atlas URI
@@ -28,10 +28,9 @@ MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.ne
 
 # Source Chat & Message IDs
 SOURCE_CHAT_ID = 5785924075
-WELCOME_MSG_ID = 70      # Text Welcome
 VIDEO_MSG_ID = 30        # Tutorial Video
-AUDIO_MSG_ID = 32        # Audio Note
 APK_MSG_ID = 12          # VIP Hack File
+AUDIO_MSG_ID = 32        # Audio Note
 
 REGISTRATION_LINK = "https://www.shreewin66.com/#/register?invitationCode=31828108076"
 # =======================================================
@@ -57,7 +56,7 @@ def save_user_to_mongo(user_id, first_name, username):
     except Exception as e:
         logging.error(f"MongoDB Error: {e}")
 
-# --- KEEP-ALIVE WEB SERVER (Fixed for UptimeRobot) ---
+# --- KEEP-ALIVE WEB SERVER ---
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -72,9 +71,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     
     def log_message(self, format, *args):
         return
-    
-    def log_message(self, format, *args):
-        return  # Yeh line server ke logs ko clean rakhegi taaki faltu print na ho
+
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
@@ -83,42 +80,26 @@ def run_web_server():
 # --- WELCOME MESSAGES SENDER FUNCTION ---
 async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int, first_name: str):
     try:
-        welcome_text = (
-            f"Welcome {first_name} ❤️‍🔥\n\n"
-            f"Yrr aapne colour trading me aaj tak kitna bhi loss kia ho no problem sab recover ho jayega\n\n"
-            f"100%\n\n"
-            f"Niche ka video pura dekho or paisa chapo💸\n"
-            f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
-        )
-        await context.bot.send_message(chat_id=user_id, text=welcome_text)
-
+        # 1. Tutorial Video (Original forward/copy taaki formatting na tute)
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
             message_id=VIDEO_MSG_ID
         )
 
-        apk_caption = "jaldi se Download kro or paisa chapo 💸"
-        primary_admin = ADMIN_IDS[0]
-        try:
-            msg = await context.bot.forward_message(chat_id=primary_admin, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
-            if msg.document:
-                await context.bot.send_document(
-                    chat_id=user_id,
-                    document=msg.document.file_id,
-                    caption=apk_caption
-                )
-                await context.bot.delete_message(chat_id=primary_admin, message_id=msg.message_id)
-            else:
-                await context.bot.copy_message(chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
-        except Exception:
-            await context.bot.copy_message(chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
+        # 2. VIP Hack File (Bina kisi hardcoded caption ke direct copy taaki original style/icons barkharar rahein)
+        await context.bot.copy_message(
+            chat_id=user_id,
+            from_chat_id=SOURCE_CHAT_ID,
+            message_id=APK_MSG_ID
+        )
 
         keyboard = [
             [InlineKeyboardButton("Registration Link 🔗", url=REGISTRATION_LINK)]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        # 3. Audio Note with Button
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
@@ -223,12 +204,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     Thread(target=run_web_server, daemon=True).start()
-
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
