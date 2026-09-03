@@ -18,7 +18,7 @@ from telegram.ext import (
 logging.basicConfig(level=logging.INFO)
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8719566198:AAH65hj6HFI3R7Qm1JxvoG_VLm0In9p4soI" 
+BOT_TOKEN = "8933004861:AAGx25qg4ckrshSzHlSyNMiFrFLzR4wJSWY" 
 
 # Multiple Admins Support (All 3 Admins)
 ADMIN_IDS = [ 5785924075, 8802096404]
