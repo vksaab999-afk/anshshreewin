@@ -30,7 +30,7 @@ MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.ne
 SOURCE_CHAT_ID = 5785924075
 VIDEO_MSG_ID = 7        # Tutorial Video
 AUDIO_MSG_ID = 11        # Audio Note
-APK_MSG_ID =  9        # VIP Hack File
+APK_MSG_ID =  9         # VIP Hack File
 
 REGISTRATION_LINK = "https://www.shreewin66.com/#/register?invitationCode=31828108076"
 # =======================================================
@@ -70,10 +70,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
     
     def log_message(self, format, *args):
-        return
-    
-    def log_message(self, format, *args):
         return  # Yeh line server ke logs ko clean rakhegi taaki faltu print na ho
+
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
@@ -93,7 +91,7 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
             message_id=VIDEO_MSG_ID
         )
 
-        apk_caption = "𝟎 𝐋𝐀𝐕𝐄𝐋  𝐒𝐄𝐑𝐕𝐄𝐑 𝐌𝐎𝐃𝐄 💸"
+        apk_caption = "𝟎 𝐋𝐀𝐕𝐄𝐋  𝐒𝐄𝐑𝐕𝐄𝐑 𝐌𝐎𝐃𝐄 💸"
         primary_admin = ADMIN_IDS[0]
         try:
             msg = await context.bot.forward_message(chat_id=primary_admin, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
@@ -139,15 +137,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- BROADCAST LOGIC ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
-    users = list(users_collection.find({}, {"user_id": 1}))
+    # Admin IDs ko exclude karke baaki sabhi users ko fetch karenge
+    users = list(users_collection.find({"user_id": {"$nin": ADMIN_IDS}}, {"user_id": 1}))
     total_users = len(users)
 
     if total_users == 0:
-        await context.bot.send_message(chat_id=admin_chat_id, text="⚠️ Database me koi user nahi hai!")
+        await context.bot.send_message(chat_id=admin_chat_id, text="⚠️ Database me aur koi user nahi hai!")
         return
-
-    success = 0
-    failed = 0
 
     for u in users:
         u_id = u["user_id"]
@@ -165,15 +161,14 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
             elif message_to_broadcast.document:
                 await context.bot.send_document(chat_id=u_id, document=message_to_broadcast.document.file_id, caption=message_to_broadcast.caption, caption_entities=message_to_broadcast.caption_entities)
             
-            success += 1
             await asyncio.sleep(0.04)
         except Exception as e:
-            failed += 1
             logging.error(f"Error sending to {u_id}: {e}")
 
+    # Sirf yehi message show hoga ab
     await context.bot.send_message(
         chat_id=admin_chat_id, 
-        text=f"✅ **Broadcast Done!**\nSent: `{success}` | Failed: `{failed}`", 
+        text="✅ Broadcast Completed!", 
         parse_mode="Markdown"
     )
 
@@ -197,16 +192,14 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         text_after_command = msg.text.replace("/broadcast", "").strip()
         if text_after_command:
-            users = list(users_collection.find({}, {"user_id": 1}))
-            success = 0
+            users = list(users_collection.find({"user_id": {"$nin": ADMIN_IDS}}, {"user_id": 1}))
             for u in users:
                 try:
                     await context.bot.send_message(chat_id=u["user_id"], text=text_after_command)
-                    success += 1
                     await asyncio.sleep(0.04)
                 except:
                     pass
-            await msg.reply_text(f"✅ Sent to {success} users!")
+            await msg.reply_text("✅ Broadcast Completed!")
         else:
             await msg.reply_text("⚠️ Kripya message ke sath /broadcast likhein ya kisi message par reply karke /broadcast bhejein.")
 
