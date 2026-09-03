@@ -132,7 +132,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
 
-# --- LIGHTNING FAST BROADCAST ENGINE (WITH EXACT ENTITY PRESERVATION LOGIC) ---
+# --- BROADCAST ENGINE (EXACT WORKING LOGIC) ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
     users = list(users_collection.find({}, {"user_id": 1}))
     total_users = len(users)
@@ -161,7 +161,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     chat_id=u_id,
                     text=message_to_broadcast.text,
                     entities=message_to_broadcast.entities,
-                    reply_markup=message_to_broadcast.reply_markup,
                 )
             elif message_to_broadcast.photo:
                 await context.bot.send_photo(
@@ -169,7 +168,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     photo=message_to_broadcast.photo[-1].file_id,
                     caption=message_to_broadcast.caption,
                     caption_entities=message_to_broadcast.caption_entities,
-                    reply_markup=message_to_broadcast.reply_markup,
                 )
             elif message_to_broadcast.video:
                 await context.bot.send_video(
@@ -177,7 +175,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     video=message_to_broadcast.video.file_id,
                     caption=message_to_broadcast.caption,
                     caption_entities=message_to_broadcast.caption_entities,
-                    reply_markup=message_to_broadcast.reply_markup,
                 )
             elif message_to_broadcast.audio:
                 await context.bot.send_audio(
@@ -185,7 +182,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     audio=message_to_broadcast.audio.file_id,
                     caption=message_to_broadcast.caption,
                     caption_entities=message_to_broadcast.caption_entities,
-                    reply_markup=message_to_broadcast.reply_markup,
                 )
             elif message_to_broadcast.voice:
                 await context.bot.send_voice(
@@ -193,7 +189,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     voice=message_to_broadcast.voice.file_id,
                     caption=message_to_broadcast.caption,
                     caption_entities=message_to_broadcast.caption_entities,
-                    reply_markup=message_to_broadcast.reply_markup,
                 )
             elif message_to_broadcast.document:
                 await context.bot.send_document(
@@ -201,7 +196,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                     document=message_to_broadcast.document.file_id,
                     caption=message_to_broadcast.caption,
                     caption_entities=message_to_broadcast.caption_entities,
-                    reply_markup=message_to_broadcast.reply_markup,
                 )
         except Exception as e:
             logging.error(f"Broadcast error for {u_id}: {e}")
@@ -304,7 +298,7 @@ def main():
         MessageHandler(filters.User(ADMIN_IDS) & ~filters.COMMAND, auto_broadcast)
     )
 
-    print("Bot is running with verified entity-preserving broadcast...")
+    print("Bot is running with exact working code logic...")
     app.run_polling(drop_pending_updates=True, close_loop=False)
 
 
