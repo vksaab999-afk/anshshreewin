@@ -81,13 +81,17 @@ def run_web_server():
 # --- INSTANT JOIN REQUEST & WELCOME SEQUENCE ---
 async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
     try:
+        # 1. Pehla Message
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_1
         )
+
+        # 2. Dusra Message
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_2
         )
 
+        # 3. Teesra Message + Button
         keyboard = [
             [
                 InlineKeyboardButton(
@@ -135,12 +139,17 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
 
-# --- 100% EXACT BROADCAST ENGINE (PRESERVES ANIMATED EMOJIS & MEDIA) ---
+# --- EXACT PREMIUM COPY BROADCAST ENGINE ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
     users = list(users_collection.find({}, {"user_id": 1}))
     total_users = len(users)
 
     if total_users == 0:
+        await context.bot.copy_message(
+            chat_id=admin_chat_id,
+            from_chat_id=SOURCE_CHAT_ID,
+            message_id=MSG_1,
+        )  # fallback msg
         await context.bot.send_message(
             chat_id=admin_chat_id, text="⚠️ Database me koi user nahi hai!"
         )
@@ -159,8 +168,8 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
         if u_id in ADMIN_IDS:
             continue
         try:
-            # Telegram ka native copy_message use kar rahe hain taaki 
-            # custom animated emojis, captions, entities aur media exact copy ho.
+            # Yeh wahi logic hai jo join sequence mein use hota hai (copy_message)
+            # Isse animated emojis, custom icons aur saari formatting 100% original jati hai!
             await context.bot.copy_message(
                 chat_id=u_id,
                 from_chat_id=admin_chat_id,
@@ -168,11 +177,7 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
                 reply_markup=message_to_broadcast.reply_markup,
             )
         except Exception as e:
-            # Fallback agar copy_message mein koi issue aaye toh direct forward/send try karein
-            try:
-                await message_to_broadcast.forward(chat_id=u_id)
-            except Exception as e2:
-                logging.error(f"Broadcast error for {u_id}: {e2}")
+            logging.error(f"Broadcast error for {u_id}: {e}")
 
     try:
         await context.bot.edit_message_text(
@@ -261,7 +266,8 @@ def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    app.app.add_handler(CommandHandler("start", start))
+    # Correct handler registration (Fixed the typo here)
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
@@ -271,7 +277,7 @@ def main():
         MessageHandler(filters.User(ADMIN_IDS) & ~filters.COMMAND, auto_broadcast)
     )
 
-    print("Bot is running with native copy_message broadcast engine...")
+    print("Bot is running with instant join request sequence...")
     app.run_polling(drop_pending_updates=True, close_loop=False)
 
 
