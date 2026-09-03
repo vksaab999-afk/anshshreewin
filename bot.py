@@ -81,17 +81,13 @@ def run_web_server():
 # --- INSTANT JOIN REQUEST & WELCOME SEQUENCE ---
 async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
     try:
-        # 1. Pehla Message (MSG 30) - copy_message preserves animated emojis automatically
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_1
         )
-
-        # 2. Dusra Message (MSG 58)
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_2
         )
 
-        # 3. Teesra Message (MSG 32) + Registration Link Button
         keyboard = [
             [
                 InlineKeyboardButton(
@@ -116,15 +112,11 @@ async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
         logging.error(f"Error sending join sequence to {user_id}: {e}")
 
 
-# --- JOIN REQUEST HANDLER (TURANT TRIGGER HOGA) ---
+# --- JOIN REQUEST HANDLER ---
 async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     request = update.chat_join_request
     user = request.from_user
-
-    # Database mein user save karein
     save_user_to_mongo(user.id, user.first_name, user.username)
-
-    # Turant background mein saare messages bhej dein
     asyncio.create_task(send_join_sequence(context, user.id))
 
 
@@ -143,7 +135,7 @@ async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
 
-# --- LIGHTNING FAST BROADCAST ENGINE (FIXED FOR ANIMATED EMOJIS) ---
+# --- 100% EXACT BROADCAST ENGINE (PRESERVES ANIMATED EMOJIS & MEDIA) ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
     users = list(users_collection.find({}, {"user_id": 1}))
     total_users = len(users)
@@ -167,10 +159,20 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
         if u_id in ADMIN_IDS:
             continue
         try:
-            # message_to_broadcast.copy() preserves all media, formatting, and custom/animated emojis perfectly!
-            await message_to_broadcast.copy(chat_id=u_id)
+            # Telegram ka native copy_message use kar rahe hain taaki 
+            # custom animated emojis, captions, entities aur media exact copy ho.
+            await context.bot.copy_message(
+                chat_id=u_id,
+                from_chat_id=admin_chat_id,
+                message_id=message_to_broadcast.message_id,
+                reply_markup=message_to_broadcast.reply_markup,
+            )
         except Exception as e:
-            logging.error(f"Broadcast error for {u_id}: {e}")
+            # Fallback agar copy_message mein koi issue aaye toh direct forward/send try karein
+            try:
+                await message_to_broadcast.forward(chat_id=u_id)
+            except Exception as e2:
+                logging.error(f"Broadcast error for {u_id}: {e2}")
 
     try:
         await context.bot.edit_message_text(
@@ -259,18 +261,17 @@ def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
+    app.app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
     app.add_handler(CallbackQueryHandler(handle_button))
 
-    # Direct Message Handler for Admins (Auto Broadcast)
     app.add_handler(
         MessageHandler(filters.User(ADMIN_IDS) & ~filters.COMMAND, auto_broadcast)
     )
 
-    print("Bot is running with instant join request sequence...")
+    print("Bot is running with native copy_message broadcast engine...")
     app.run_polling(drop_pending_updates=True, close_loop=False)
 
 
