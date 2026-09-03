@@ -70,10 +70,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
     
     def log_message(self, format, *args):
-        return
-    
-    def log_message(self, format, *args):
         return  # Yeh line server ke logs ko clean rakhegi taaki faltu print na ho
+
 def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     server = HTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
@@ -87,33 +85,26 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
         )
         await context.bot.send_message(chat_id=user_id, text=welcome_text)
 
+        # Tutorial Video
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
             message_id=VIDEO_MSG_ID
         )
 
-        apk_caption = "jaldi se Download kro or paisa chapo 💸"
-        primary_admin = ADMIN_IDS[0]
-        try:
-            msg = await context.bot.forward_message(chat_id=primary_admin, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
-            if msg.document:
-                await context.bot.send_document(
-                    chat_id=user_id,
-                    document=msg.document.file_id,
-                    caption=apk_caption
-                )
-                await context.bot.delete_message(chat_id=primary_admin, message_id=msg.message_id)
-            else:
-                await context.bot.copy_message(chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
-        except Exception:
-            await context.bot.copy_message(chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
+        # VIP Hack File (Ab original premium formatting aur icons ke sath copy hoga)
+        await context.bot.copy_message(
+            chat_id=user_id,
+            from_chat_id=SOURCE_CHAT_ID,
+            message_id=APK_MSG_ID
+        )
 
         keyboard = [
             [InlineKeyboardButton("Registration Link 🔗", url=REGISTRATION_LINK)]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
 
+        # Audio Note with Registration Link Button
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
