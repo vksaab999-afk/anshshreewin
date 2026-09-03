@@ -181,7 +181,9 @@ def main():
         MessageHandler(filters.TEXT & ~filters.COMMAND, admin_broadcast)
     )
     application.add_handler(
-        MessageHandler(filters.PHOTO | filters.VIDEO | filters.DOCUMENT, admin_broadcast)
+        MessageHandler(
+            filters.PHOTO | filters.VIDEO | filters.Document.ALL, admin_broadcast
+        )
     )
 
     logger.info("Bot is starting polling with ID forwarding...")
