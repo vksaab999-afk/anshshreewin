@@ -28,7 +28,6 @@ MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.ne
 
 # Source Chat & Message IDs
 SOURCE_CHAT_ID = 5785924075
-WELCOME_MSG_ID = 12      # Text Welcome
 VIDEO_MSG_ID = 30        # Tutorial Video
 AUDIO_MSG_ID = 32        # Audio Note
 APK_MSG_ID = 12          # VIP Hack File
