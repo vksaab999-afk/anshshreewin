@@ -1,198 +1,315 @@
 import asyncio
 import logging
 import os
-from flask import Flask
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from pymongo import MongoClient
-from telegram import ChatJoinRequest, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import ChatJoinRequestHandler, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import (
     ApplicationBuilder,
-    ChatJoinRequestHandler,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
     filters,
 )
-import threading
 
-# Logging setup
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+# Logging Setup
+logging.basicConfig(level=logging.INFO)
 
-# Configurations
-TOKEN = "8727719954:AAFLw0h-SOVxsKR_917eivJdWyBCjgHsLYc"
+# ==================== CONFIGURATION ====================
+BOT_TOKEN = "8727719954:AAFLw0h-SOVxsKR_917eivJdWyBCjgHsLYc"
+
+# Admin IDs list
+ADMIN_IDS = [5785924075, 8802096404]
+
+# MongoDB Atlas URI
 MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.net/?appName=anshshreewin"
-ADMINS = [5785924075, 8802096404]
 
-# Jis Admin ki chat mein messages (30, 58, 32) bhej kar IDs nikali thi, uski User ID yahan dalein:
-ADMIN_CHAT_ID = 5785924075
+# Source Chat & Message IDs (Jahan se messages copy hokar users ko jayenge)
+SOURCE_CHAT_ID = 5785924075
+MSG_1 = 30  # Pehla message
+MSG_2 = 58  # Dusra message
+MSG_3 = 32  # Teesra message (Jiske sath Registration button rahega)
+# =======================================================
 
-# Exact Message IDs
-MSG_1_ID = 30  # Pehla message
-MSG_2_ID = 58  # Dusra message
-MSG_3_ID = 32  # Teesra message (Jiske sath button rahega)
-
-# MongoDB Connection
-client = MongoClient(MONGO_URI)
-db = client["telegram_bot_db"]
+# --- MONGODB SETUP ---
+mongo_client = MongoClient(MONGO_URI)
+db = mongo_client["telegram_bot_db"]
 users_collection = db["users"]
 
-# Flask App for Render Keep-Alive (24x7 Active)
-app = Flask(__name__)
 
-
-@app.route("/")
-def home():
-    return "Bot is active and running smoothly!"
-
-
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, use_reloader=False)
-
-
-# 1. Join Request Handler (Instant Messages via ID & Save User)
-async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    req: ChatJoinRequest = update.chat_join_request
-    user = req.from_user
-    user_id = user.id
-    username = user.username or "N/A"
-    first_name = user.first_name or "User"
-
-    # Save user to MongoDB (if not already exists)
+def save_user_to_mongo(user_id, first_name, username):
     try:
-        if not users_collection.find_one({"user_id": user_id}):
-            users_collection.insert_one(
-                {
+        users_collection.update_one(
+            {"user_id": user_id},
+            {
+                "$set": {
                     "user_id": user_id,
-                    "username": username,
                     "first_name": first_name,
+                    "username": username,
                 }
-            )
-            logger.info(f"New user saved: {user_id} ({first_name})")
+            },
+            upsert=True,
+        )
     except Exception as e:
-        logger.error(f"Database error while saving user: {e}")
+        logging.error(f"MongoDB Error: {e}")
 
-    # Automatically approve the join request
+
+# --- KEEP-ALIVE WEB SERVER ---
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot is Live and MongoDB Connected!")
+
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+
+
+def run_web_server():
+    port = int(os.environ.get("PORT", 8080))
+    server = ThreadingHTTPServer(("0.0.0.0", port), SimpleHTTPRequestHandler)
+    server.serve_forever()
+
+
+# --- INSTANT JOIN REQUEST & WELCOME SEQUENCE ---
+async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
     try:
-        await req.approve()
-    except Exception as e:
-        logger.error(f"Failed to approve join request: {e}")
+        # 1. Pehla Message (MSG 30)
+        await context.bot.copy_message(
+            chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_1
+        )
 
-    # Registration Link Button for 3rd Message
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "🔗 Registration Link",
-                url="https://www.shreewin66.com/#/register?invitationCode=31828108076",
-            )
+        # 2. Dusra Message (MSG 58)
+        await context.bot.copy_message(
+            chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_2
+        )
+
+        # 3. Teesra Message (MSG 32) + Registration Link Button
+        keyboard = [
+            [
+                InlineKeyboardButton(
+                    "REGISTRATION LINK 🔗",
+                    url=(
+                        "https://www.shreewin66.com/#/register?invitationCode=31828108076"
+                    ),
+                )
+            ]
         ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    try:
-        # Admin chat se messages copy karke naye user ko bhejna
-        await context.bot.copy_message(
-            chat_id=user_id, from_chat_id=ADMIN_CHAT_ID, message_id=MSG_1_ID
-        )
-        await context.bot.copy_message(
-            chat_id=user_id, from_chat_id=ADMIN_CHAT_ID, message_id=MSG_2_ID
-        )
         await context.bot.copy_message(
             chat_id=user_id,
-            from_chat_id=ADMIN_CHAT_ID,
-            message_id=MSG_3_ID,
+            from_chat_id=SOURCE_CHAT_ID,
+            message_id=MSG_3,
             reply_markup=reply_markup,
         )
 
-        logger.info(
-            f"All 3 premium welcome messages successfully sent to user {user_id}"
-        )
+        logging.info(f"Instant welcome sequence sent successfully to {user_id}")
     except Exception as e:
-        logger.error(
-            f"Failed to send messages via ID to {user_id}. Error: {e}"
+        logging.error(f"Error sending join sequence to {user_id}: {e}")
+
+
+# --- JOIN REQUEST HANDLER (TURANT TRIGGER HOGA) ---
+async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    request = update.chat_join_request
+    user = request.from_user
+
+    # Database mein user save karein
+    save_user_to_mongo(user.id, user.first_name, user.username)
+
+    # Turant background mein saare messages bhej dein
+    asyncio.create_task(send_join_sequence(context, user.id))
+
+
+# --- START COMMAND ---
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    save_user_to_mongo(user.id, user.first_name, user.username)
+    await update.message.reply_text(
+        "👋 Welcome! Channel join karne par aapko saari details mil jayengi."
+    )
+
+
+# --- BUTTON HANDLER ---
+async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+
+# --- LIGHTNING FAST BROADCAST ENGINE ---
+async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
+    users = list(users_collection.find({}, {"user_id": 1}))
+    total_users = len(users)
+
+    if total_users == 0:
+        await context.bot.send_message(
+            chat_id=admin_chat_id, text="⚠️ Database me koi user nahi hai!"
+        )
+        return
+
+    progress_msg = await context.bot.send_message(
+        chat_id=admin_chat_id,
+        text=(
+            f"🚀 **Broadcast Started!**\nTotal Users:"
+            f" `{total_users}`\nPlease wait..."
+        ),
+    )
+
+    for u in users:
+        u_id = u["user_id"]
+        if u_id in ADMIN_IDS:
+            continue
+        try:
+            if message_to_broadcast.text:
+                await context.bot.send_message(
+                    chat_id=u_id,
+                    text=message_to_broadcast.text,
+                    entities=message_to_broadcast.entities,
+                )
+            elif message_to_broadcast.photo:
+                await context.bot.send_photo(
+                    chat_id=u_id,
+                    photo=message_to_broadcast.photo[-1].file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                )
+            elif message_to_broadcast.video:
+                await context.bot.send_video(
+                    chat_id=u_id,
+                    video=message_to_broadcast.video.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                )
+            elif message_to_broadcast.audio:
+                await context.bot.send_audio(
+                    chat_id=u_id,
+                    audio=message_to_broadcast.audio.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                )
+            elif message_to_broadcast.voice:
+                await context.bot.send_voice(
+                    chat_id=u_id,
+                    voice=message_to_broadcast.voice.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                )
+            elif message_to_broadcast.document:
+                await context.bot.send_document(
+                    chat_id=u_id,
+                    document=message_to_broadcast.document.file_id,
+                    caption=message_to_broadcast.caption,
+                    caption_entities=message_to_broadcast.caption_entities,
+                )
+        except Exception as e:
+            logging.error(f"Broadcast error for {u_id}: {e}")
+
+    try:
+        await context.bot.edit_message_text(
+            chat_id=admin_chat_id,
+            message_id=progress_msg.message_id,
+            text="✅ **Broadcast Completed!**",
+            parse_mode="Markdown",
+        )
+    except:
+        await context.bot.send_message(
+            chat_id=admin_chat_id,
+            text="✅ **Broadcast Completed!**",
+            parse_mode="Markdown",
         )
 
 
-# 2. Stats Command (/stats - Admin Only)
-async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id not in ADMINS:
-        await update.message.reply_text("❌ Aap is command ke liye authorized nahi hain.")
+# --- AUTO BROADCAST FOR ADMINS ---
+async def auto_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.message
+    if not msg:
+        return
+    if update.effective_user.id not in ADMIN_IDS:
+        return
+    if msg.text and msg.text.startswith("/"):
+        return
+    await execute_broadcast(msg, context, update.effective_user.id)
+
+
+# --- COMMAND BASED BROADCAST ---
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.message
+    admin_id = update.effective_user.id
+    if admin_id not in ADMIN_IDS:
         return
 
-    total_users = users_collection.count_documents({})
-    await update.message.reply_text(
-        f"📊 **Bot Statistics:**\n\n👥 Total Saved Users: `{total_users}`",
-        parse_mode="Markdown",
-    )
+    if msg.reply_to_message:
+        await execute_broadcast(msg.reply_to_message, context, admin_id)
+    else:
+        text_after_command = msg.text.replace("/broadcast", "").strip()
+        if text_after_command:
+            users = list(users_collection.find({}, {"user_id": 1}))
+            total_users = len(users)
+
+            progress_msg = await msg.reply_text(
+                f"🚀 Broadcast started for {total_users} users..."
+            )
+
+            for u in users:
+                u_id = u["user_id"]
+                if u_id in ADMIN_IDS:
+                    continue
+                try:
+                    await context.bot.send_message(
+                        chat_id=u_id, text=text_after_command
+                    )
+                except:
+                    pass
+
+            await progress_msg.edit_text(
+                "✅ **Broadcast Completed!**", parse_mode="Markdown"
+            )
+        else:
+            await msg.reply_text(
+                "⚠️ Kripya message ke sath /broadcast likhein ya kisi message"
+                " par reply karke /broadcast bhejein."
+            )
 
 
-# 3. Admin Broadcast Handler
-async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id not in ADMINS:
-        return
-
-    message = update.message
-    if not message:
-        return
-
-    all_users = list(users_collection.find({}, {"user_id": 1}))
-    if not all_users:
-        await message.reply_text("⚠️ Database mein koi user nahi mila broadcast ke liye.")
-        return
-
-    success_count = 0
-    fail_count = 0
-
-    status_msg = await message.reply_text(
-        f"📢 Broadcast shuru ho raha hai total {len(all_users)} users ko..."
-    )
-
-    for u in all_users:
-        uid = u["user_id"]
-        try:
-            await message.copy(chat_id=uid)
-            success_count += 1
-        except Exception as e:
-            logger.error(f"Failed to send broadcast to {uid}: {e}")
-            fail_count += 1
-
-    await status_msg.edit_text(
-        f"✅ **Broadcast Completed!**\n\n"
-        f"✔️ Success: {success_count}\n"
-        f"❌ Failed: {fail_count}"
-    )
+# --- STATS COMMAND ---
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id in ADMIN_IDS:
+        total_users = users_collection.count_documents({})
+        await update.message.reply_text(
+            f"📊 **Total Users:** `{total_users}`", parse_mode="Markdown"
+        )
 
 
 def main():
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
+    Thread(target=run_web_server, daemon=True).start()
 
     try:
-        asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()
     except RuntimeError:
-        asyncio.set_event_loop(asyncio.new_event_loop())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
-    application = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    application.add_handler(ChatJoinRequestHandler(handle_join_request))
-    application.add_handler(CommandHandler("stats", stats_command))
-    application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, admin_broadcast)
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("broadcast", broadcast_command))
+    app.add_handler(ChatJoinRequestHandler(handle_join_request))
+    app.add_handler(CallbackQueryHandler(handle_button))
+
+    # Direct Message Handler for Admins (Auto Broadcast)
+    app.add_handler(
+        MessageHandler(filters.User(ADMIN_IDS) & ~filters.COMMAND, auto_broadcast)
     )
-    application.add_handler(
-        MessageHandler(
-            filters.PHOTO | filters.VIDEO | filters.Document.ALL, admin_broadcast
-        )
-    )
 
-    logger.info("Bot is starting polling with ID forwarding...")
-    application.run_polling()
+    print("Bot is running with instant join request sequence...")
+    app.run_polling(drop_pending_updates=True, close_loop=False)
 
 
 if __name__ == "__main__":
