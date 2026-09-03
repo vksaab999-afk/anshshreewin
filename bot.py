@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from flask import Flask
@@ -46,7 +47,7 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, use_reloader=False)
 
 
 # 1. Join Request Handler (Instant Messages via ID & Save User)
@@ -171,6 +172,12 @@ def main():
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
+
+    # Event loop fix for Python 3.10+ / Render environment
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
     application = ApplicationBuilder().token(TOKEN).build()
 
