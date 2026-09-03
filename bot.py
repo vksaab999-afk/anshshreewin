@@ -9,9 +9,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     ChatJoinRequestHandler,
-    MessageHandler,
     ContextTypes,
-    filters,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +20,7 @@ MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.ne
 
 SOURCE_CHAT_ID = 5785924075
 VIDEO_MSG_ID = 30        # Tutorial Video
-APK_MSG_ID = 12          # VIP Hack File (Original caption ke sath)
+APK_MSG_ID = 12          # VIP Hack File
 AUDIO_MSG_ID = 32        # Audio Note
 
 REGISTRATION_LINK = "https://www.shreewin66.com/#/register?invitationCode=31828108076"
@@ -71,7 +69,7 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
             message_id=VIDEO_MSG_ID
         )
 
-        # 2. VIP Hack File (Yeh file aur iska original caption dono exact copy kar dega)
+        # 2. VIP Hack File (Original caption ke sath)
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
@@ -112,6 +110,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     Thread(target=run_web_server, daemon=True).start()
+    
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
