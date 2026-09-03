@@ -27,11 +27,11 @@ ADMIN_IDS = [5785924075, 8802096404]
 # MongoDB Atlas URI
 MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.net/?appName=anshshreewin"
 
-# Source Chat & Message IDs (Jahan se messages copy hokar users ko jayenge)
+# Source Chat & Message IDs
 SOURCE_CHAT_ID = 5785924075
-MSG_1 = 30  # Pehla message
-MSG_2 = 58  # Dusra message
-MSG_3 = 32  # Teesra message (Jiske sath Registration button rahega)
+MSG_1 = 30
+MSG_2 = 58
+MSG_3 = 32
 # =======================================================
 
 # --- MONGODB SETUP ---
@@ -78,20 +78,16 @@ def run_web_server():
     server.serve_forever()
 
 
-# --- INSTANT JOIN REQUEST & WELCOME SEQUENCE ---
+# --- INSTANT JOIN SEQUENCE ---
 async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
     try:
-        # 1. Pehla Message
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_1
         )
-
-        # 2. Dusra Message
         await context.bot.copy_message(
             chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=MSG_2
         )
 
-        # 3. Teesra Message + Button
         keyboard = [
             [
                 InlineKeyboardButton(
@@ -110,10 +106,8 @@ async def send_join_sequence(context: ContextTypes.DEFAULT_TYPE, user_id: int):
             message_id=MSG_3,
             reply_markup=reply_markup,
         )
-
-        logging.info(f"Instant welcome sequence sent successfully to {user_id}")
     except Exception as e:
-        logging.error(f"Error sending join sequence to {user_id}: {e}")
+        logging.error(f"Error in join sequence: {e}")
 
 
 # --- JOIN REQUEST HANDLER ---
@@ -133,23 +127,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# --- BUTTON HANDLER ---
 async def handle_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
 
-# --- EXACT PREMIUM COPY BROADCAST ENGINE ---
+# --- BROADCAST ENGINE WITH ENTITIES PRESERVATION ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
     users = list(users_collection.find({}, {"user_id": 1}))
     total_users = len(users)
 
     if total_users == 0:
-        await context.bot.copy_message(
-            chat_id=admin_chat_id,
-            from_chat_id=SOURCE_CHAT_ID,
-            message_id=MSG_1,
-        )  # fallback msg
         await context.bot.send_message(
             chat_id=admin_chat_id, text="⚠️ Database me koi user nahi hai!"
         )
@@ -168,14 +156,54 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
         if u_id in ADMIN_IDS:
             continue
         try:
-            # Yeh wahi logic hai jo join sequence mein use hota hai (copy_message)
-            # Isse animated emojis, custom icons aur saari formatting 100% original jati hai!
-            await context.bot.copy_message(
-                chat_id=u_id,
-                from_chat_id=admin_chat_id,
-                message_id=message_to_broadcast.message_id,
-                reply_markup=message_to_broadcast.reply_markup,
-            )
+            # Agar text message hai toh uski entities (animated emojis) ke sath send karenge
+            if message_to_broadcast.text:
+                await context.bot.send_message(
+                    chat_id=u_id,
+                    text=message_to_broadcast.text,
+                    entities=message_to_broadcast.entities,
+                    reply_markup=message_to_broadcast.reply_markup,
+                )
+            elif message_to_broadcast.caption:
+                # Media hai toh caption aur caption_entities ke sath bhejenge
+                if message_to_broadcast.photo:
+                    await context.bot.send_photo(
+                        chat_id=u_id,
+                        photo=message_to_broadcast.photo[-1].file_id,
+                        caption=message_to_broadcast.caption,
+                        caption_entities=message_to_broadcast.caption_entities,
+                        reply_markup=message_to_broadcast.reply_markup,
+                    )
+                elif message_to_broadcast.video:
+                    await context.bot.send_video(
+                        chat_id=u_id,
+                        video=message_to_broadcast.video.file_id,
+                        caption=message_to_broadcast.caption,
+                        caption_entities=message_to_broadcast.caption_entities,
+                        reply_markup=message_to_broadcast.reply_markup,
+                    )
+                elif message_to_broadcast.document:
+                    await context.bot.send_document(
+                        chat_id=u_id,
+                        document=message_to_broadcast.document.file_id,
+                        caption=message_to_broadcast.caption,
+                        caption_entities=message_to_broadcast.caption_entities,
+                        reply_markup=message_to_broadcast.reply_markup,
+                    )
+                else:
+                    await context.bot.copy_message(
+                        chat_id=u_id,
+                        from_chat_id=admin_chat_id,
+                        message_id=message_to_broadcast.message_id,
+                        reply_markup=message_to_broadcast.reply_markup,
+                    )
+            else:
+                await context.bot.copy_message(
+                    chat_id=u_id,
+                    from_chat_id=admin_chat_id,
+                    message_id=message_to_broadcast.message_id,
+                    reply_markup=message_to_broadcast.reply_markup,
+                )
         except Exception as e:
             logging.error(f"Broadcast error for {u_id}: {e}")
 
@@ -220,11 +248,9 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if text_after_command:
             users = list(users_collection.find({}, {"user_id": 1}))
             total_users = len(users)
-
             progress_msg = await msg.reply_text(
                 f"🚀 Broadcast started for {total_users} users..."
             )
-
             for u in users:
                 u_id = u["user_id"]
                 if u_id in ADMIN_IDS:
@@ -235,7 +261,6 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
                 except:
                     pass
-
             await progress_msg.edit_text(
                 "✅ **Broadcast Completed!**", parse_mode="Markdown"
             )
@@ -246,7 +271,6 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
 
-# --- STATS COMMAND ---
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id in ADMIN_IDS:
         total_users = users_collection.count_documents({})
@@ -266,18 +290,16 @@ def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # Correct handler registration (Fixed the typo here)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
     app.add_handler(ChatJoinRequestHandler(handle_join_request))
     app.add_handler(CallbackQueryHandler(handle_button))
-
     app.add_handler(
         MessageHandler(filters.User(ADMIN_IDS) & ~filters.COMMAND, auto_broadcast)
     )
 
-    print("Bot is running with instant join request sequence...")
+    print("Bot is running with explicit entity preservation...")
     app.run_polling(drop_pending_updates=True, close_loop=False)
 
 
