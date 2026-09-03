@@ -26,7 +26,10 @@ TOKEN = "8727719954:AAFLw0h-SOVxsKR_917eivJdWyBCjgHsLYc"
 MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.net/?appName=anshshreewin"
 ADMINS = [5785924075, 8802096404]
 
-# Exact Message IDs (Bot chat se nikali hui)
+# Jis Admin ki chat mein messages (30, 58, 32) bhej kar IDs nikali thi, uski User ID yahan dalein:
+ADMIN_CHAT_ID = 5785924075
+
+# Exact Message IDs
 MSG_1_ID = 30  # Pehla message
 MSG_2_ID = 58  # Dusra message
 MSG_3_ID = 32  # Teesra message (Jiske sath button rahega)
@@ -90,18 +93,16 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     try:
-        # 1st Message bhejo (ID: 30)
+        # Admin chat se messages copy karke naye user ko bhejna
         await context.bot.copy_message(
-            chat_id=user_id, from_chat_id=user_id, message_id=MSG_1_ID
+            chat_id=user_id, from_chat_id=ADMIN_CHAT_ID, message_id=MSG_1_ID
         )
-        # 2nd Message bhejo (ID: 58)
         await context.bot.copy_message(
-            chat_id=user_id, from_chat_id=user_id, message_id=MSG_2_ID
+            chat_id=user_id, from_chat_id=ADMIN_CHAT_ID, message_id=MSG_2_ID
         )
-        # 3rd Message button ke sath bhejo (ID: 32)
         await context.bot.copy_message(
             chat_id=user_id,
-            from_chat_id=user_id,
+            from_chat_id=ADMIN_CHAT_ID,
             message_id=MSG_3_ID,
             reply_markup=reply_markup,
         )
@@ -111,7 +112,7 @@ async def handle_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
     except Exception as e:
         logger.error(
-            f"Failed to send messages via ID to {user_id} (Check if bot can access messages): {e}"
+            f"Failed to send messages via ID to {user_id}. Error: {e}"
         )
 
 
@@ -129,7 +130,7 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# 3. Admin Broadcast Handler (Jab admin kuch bheje toh sabhi ko jaye)
+# 3. Admin Broadcast Handler
 async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMINS:
@@ -168,12 +169,10 @@ async def admin_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 def main():
-    # Start Flask server in background thread for Render Uptime (Keep-Alive)
     flask_thread = threading.Thread(target=run_flask)
     flask_thread.daemon = True
     flask_thread.start()
 
-    # Event loop fix for Python 3.10+ / Render environment
     try:
         asyncio.get_event_loop()
     except RuntimeError:
@@ -181,7 +180,6 @@ def main():
 
     application = ApplicationBuilder().token(TOKEN).build()
 
-    # Register Handlers
     application.add_handler(ChatJoinRequestHandler(handle_join_request))
     application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(
