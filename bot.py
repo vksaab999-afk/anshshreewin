@@ -83,7 +83,7 @@ def run_web_server():
 async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int, first_name: str):
     try:
         welcome_text = (
-            f"Welcome {first_name} ❤️‍🔥\n\n"
+            f"👋🏻 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 {first_name} ❤️‍🔥TO OUR PRIVATE SERVER 🔥\n\n"
         )
         await context.bot.send_message(chat_id=user_id, text=welcome_text)
 
