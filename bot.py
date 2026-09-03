@@ -98,7 +98,7 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
             message_id=VIDEO_MSG_ID
         )
 
-        apk_caption = "jaldi se Download kro or paisa chapo 💸"
+        apk_caption = "𝟎 𝐋𝐀𝐕𝐄𝐋  𝐒𝐄𝐑𝐕𝐄𝐑 𝐌𝐎𝐃𝐄 💸"
         primary_admin = ADMIN_IDS[0]
         try:
             msg = await context.bot.forward_message(chat_id=primary_admin, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
