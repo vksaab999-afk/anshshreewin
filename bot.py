@@ -28,7 +28,6 @@ MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.ne
 
 # Source Chat & Message IDs
 SOURCE_CHAT_ID = 5785924075
-WELCOME_MSG_ID = 5      # Text Welcome
 VIDEO_MSG_ID = 7        # Tutorial Video
 AUDIO_MSG_ID = 11        # Audio Note
 APK_MSG_ID =  9        # VIP Hack File
@@ -85,10 +84,6 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
     try:
         welcome_text = (
             f"Welcome {first_name} ❤️‍🔥\n\n"
-            f"Yrr aapne colour trading me aaj tak kitna bhi loss kia ho no problem sab recover ho jayega\n\n"
-            f"100%\n\n"
-            f"Niche ka video pura dekho or paisa chapo💸\n"
-            f"⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️⬇️"
         )
         await context.bot.send_message(chat_id=user_id, text=welcome_text)
 
