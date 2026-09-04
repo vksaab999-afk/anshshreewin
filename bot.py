@@ -29,7 +29,7 @@ MONGO_URI = "mongodb+srv://anshbhai:shreewin0001@anshshreewin.3ehveho.mongodb.ne
 # Source Chat & Message IDs
 SOURCE_CHAT_ID = 5785924075
 VIDEO_MSG_ID = 7        # Tutorial Video
-AUDIO_MSG_ID = 11        # Audio Note
+AUDIO_MSG_ID = 11       # Audio Note
 APK_MSG_ID =  9         # VIP Hack File
 
 REGISTRATION_LINK = "https://www.shreewin66.com/#/register?invitationCode=31828108076"
@@ -85,10 +85,18 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
         )
         await context.bot.send_message(chat_id=user_id, text=welcome_text)
 
+        # Video ke sath do naye custom animated emoji buttons
+        video_keyboard = [
+            [InlineKeyboardButton("📦 VIP CHANNEL", url="https://t.me/+Gnb-GDp9mZoyYTQ1")],
+            [InlineKeyboardButton("🔗 REGISTRATION LINK", url="https://www.shreewin66.com/#/register?invitationCode=31828108076")]
+        ]
+        video_reply_markup = InlineKeyboardMarkup(video_keyboard)
+
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
-            message_id=VIDEO_MSG_ID
+            message_id=VIDEO_MSG_ID,
+            reply_markup=video_reply_markup
         )
 
         apk_caption = "𝟎 𝐋𝐀𝐕𝐄𝐋  𝐒𝐄𝐑𝐕𝐄𝐑 𝐌𝐎𝐃𝐄 💸"
@@ -107,16 +115,17 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
         except Exception:
             await context.bot.copy_message(chat_id=user_id, from_chat_id=SOURCE_CHAT_ID, message_id=APK_MSG_ID)
 
-        keyboard = [
-            [InlineKeyboardButton("Registration Link 🔗", url=REGISTRATION_LINK)]
+        # Audio ke sath DM for loss recovery button
+        audio_keyboard = [
+            [InlineKeyboardButton("💬 DM FOR LOSS RECOVERY", url="https://t.me/m/3Kp2mbceZmMx")]
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+        audio_reply_markup = InlineKeyboardMarkup(audio_keyboard)
 
         await context.bot.copy_message(
             chat_id=user_id,
             from_chat_id=SOURCE_CHAT_ID,
             message_id=AUDIO_MSG_ID,
-            reply_markup=reply_markup
+            reply_markup=audio_reply_markup
         )
 
     except Exception as e:
@@ -137,7 +146,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- BROADCAST LOGIC ---
 async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
-    # Admin IDs ko exclude karke baaki sabhi users ko fetch karenge
     users = list(users_collection.find({"user_id": {"$nin": ADMIN_IDS}}, {"user_id": 1}))
     total_users = len(users)
 
@@ -165,7 +173,6 @@ async def execute_broadcast(message_to_broadcast, context, admin_chat_id):
         except Exception as e:
             logging.error(f"Error sending to {u_id}: {e}")
 
-    # Sirf yehi message show hoga ab
     await context.bot.send_message(
         chat_id=admin_chat_id, 
         text="✅ Broadcast Completed!", 
