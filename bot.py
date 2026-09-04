@@ -87,7 +87,7 @@ async def send_welcome_content(context: ContextTypes.DEFAULT_TYPE, user_id: int,
 
         # Video ke sath do naye custom animated emoji buttons
         video_keyboard = [
-            [InlineKeyboardButton("📦 VIP CHANNEL", url="https://t.me/+Gnb-GDp9mZoyYTQ1")],
+            [InlineKeyboardButton("📦 VIP CHANNEL", url="https://t.me/+0IlUS3h89VljNjJl")],
             [InlineKeyboardButton("🔗 REGISTRATION LINK", url="https://www.shreewin66.com/#/register?invitationCode=31828108076")]
         ]
         video_reply_markup = InlineKeyboardMarkup(video_keyboard)
