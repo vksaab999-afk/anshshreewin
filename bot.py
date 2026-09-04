@@ -21,7 +21,7 @@ def run_web_server():
     server.serve_forever()
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8727719954:AAFLw0h-SOVxsKR_917eivJdWyBCjgHsLYc"
+BOT_TOKEN = "8933004861:AAGx25qg4ckrshSzHlSyNMiFrFLzR4wJSWY"
 # =======================================================
 
 async def get_ids(update: Update, context: ContextTypes.DEFAULT_TYPE):
